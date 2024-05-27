@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Met Museum Gallery Item Generator</title>
+    <link href="https://fonts.googleapis.com/css?family=Poppins|Prata" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+          theme: {
+            extend: {
+                fontFamily: {
+                    poppins: ["Poppins", "sans-serif"],
+                    prata: ["Prata", "serif"],
+                },
+            }
+          }
+        }
+      </script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+</head>
+<body class="bg-stone-600 font-poppins">
+    <h1 class="text-center md:text-4xl text-2xl text-white pt-2 font-prata">Met Museum Item Generator</h1>
+    <div id="item-info" class="md:w-3/6 w-4/5 m-auto mt-8 bg-stone-300 rounded-lg shadow-lg">
+    </div>
+    <div id="filter" class="md:w-3/6 w-4/5 m-auto py-3 flex flex-auto flex-col md:flex-row gap-2">
+        <label class="text-white content-center">Filter by Department: </label>
+        <select id="department" class="p-2 rounded-lg">
+        </select>
+        <button id="new-button" class="bg-violet-500 hover:bg-violet-600 active:bg-violet-700 focus:outline-none focus:ring focus:ring-violet-300 rounded-lg px-4 py-2 font-semibold" >Get New Item</button>
+    </div>
+
+</body>
+
+<script>
+
+    function getItem(department = 0) {
+        $("#item-info").html(`<h3 class="font-semibold p-4">Loading...</h3>`);
+        $.get(`https://collectionapi.metmuseum.org/public/collection/v1/objects${department != 0 ? '?departmentIds=' + department : ''}`, (data) => {
+        }).then(function(value) {
+            randomNum = value.objectIDs[Math.floor(Math.random() * value.objectIDs.length)];
+            $.get(`https://collectionapi.metmuseum.org/public/collection/v1/objects/${randomNum}`, (data) => {                
+                $("#item-info").html(`
+                <div id="img-div" class="">
+                    <img id="item-image" src="" class="w-full rounded-t-lg h-80 object-cover" />
+                </div>
+                <div id="item-info-text" class="p-4">
+                <h2 id="item-title" class="md:text-xl font-semibold"></h2>
+                <h3 id="artist-name" class="font-medium md:text-lg" ></h3>
+                <h3 id="year"></h3>
+                <h3 id="country"></h3>
+                <h3 id="department-name"></h3>
+                <h3 id="medium"></h3>
+                <h3 id="dimensions"></h3>
+                <h4 id="more-info" class="text-violet-500 font-semibold hover:text-violet-700 py-2"></h4>
+                </div>`);
+                
+
+                $("#item-title").html(data.title);
+                $("#medium").html(`Medium: ${data.medium}`);
+                $("#department-name").html(`${data.department} Department`);
+                $("#year").html(`${data.objectDate}`);
+                $("#dimensions").html(`${data.dimensions}`);
+                $("#artist-name").html(`${data.artistDisplayName == "" ? "Unknown" : data.artistDisplayName} ${data.artistDisplayBio == "" ? "" : "(" + data.artistDisplayBio + ")"}`);
+                $("#country").html(`${data.country}`);
+                $("#more-info").html(`<a href="${data.objectURL}"> More Info </a>`);
+
+                if (data.primaryImageSmall == "") {
+                    $("#img-div").html(`<div class="content-center bg-stone-500 w-full rounded-t-lg h-80 object-cover"><i class="fa-solid fa-image text-9xl text-center block"></i><h3 class="text-center">Image Unavailable</h3></div>`);
+                } else {
+                    $("#item-image").attr('src', data.primaryImageSmall);
+                }
+            });
+        })
+    }
+
+    function getDepartment() {
+        let departmentHTML = ``;
+        $.get(`https://collectionapi.metmuseum.org/public/collection/v1/departments`, (data) => {
+        }).then(function(value) {
+            let departmentArr = value.departments;
+            departmentHTML += `<option value="0">Any Department</option>`;
+            for (let department of departmentArr) {
+                departmentHTML += `<option value=${department.departmentId}>${department.displayName}</option>`;
+            }
+            $("#department").html(departmentHTML);
+        });
+
+    }
+
+    $("#new-button").click(function() {
+        let departmentID = $("#department").val();
+        getItem(departmentID);
+    });
+
+    getItem();
+    getDepartment();
+</script>
+</html>
